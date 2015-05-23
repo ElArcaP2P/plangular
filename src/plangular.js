@@ -1,4 +1,3 @@
-
 // Plangular
 // AngularJS Version
 
@@ -9,7 +8,7 @@ var resolve = require('soundcloud-resolve-jsonp');
 var Player = require('audio-player');
 var hhmmss = require('hhmmss');
 
-plangular.directive('plangular', ['$timeout', 'plangularConfig', function($timeout, plangularConfig) {
+plangular.directive('plangular', ['$timeout', 'plangularConfig', function($timeout, $rootScope, plangularConfig) {
 
   var client_id = plangularConfig.clientId;
   var player = new Player();
@@ -55,8 +54,13 @@ plangular.directive('plangular', ['$timeout', 'plangularConfig', function($timeo
       }
 
       if (src) {
-        resolve({ url: src, client_id: client_id }, function(err, res) {
-          if (err) { console.error(err); }
+        resolve({
+          url: src,
+          client_id: client_id
+        }, function(err, res) {
+          if (err) {
+            console.error(err);
+          }
           scope.$apply(function() {
             scope.track = createSrc(res);
             if (Array.isArray(res)) {
@@ -79,6 +83,7 @@ plangular.directive('plangular', ['$timeout', 'plangularConfig', function($timeo
           scope.track = scope.tracks[i];
         }
         player.play(scope.track.src);
+        $rootScope.$broadcast('changeState', 'play');
       };
 
       scope.pause = function() {
@@ -90,11 +95,19 @@ plangular.directive('plangular', ['$timeout', 'plangularConfig', function($timeo
           scope.index = i;
           scope.track = scope.tracks[i];
         }
-        player.playPause(scope.track.src);
+        if (i != player.playing) {
+          player.play(src);
+          $rootScope.$broadcast('changeState', 'play');
+        } else {
+          player.pause();
+          $rootScope.$broadcast('changeState', 'pause');
+        }
       };
 
       scope.previous = function() {
-        if (scope.tracks.length < 1) { return false }
+        if (scope.tracks.length < 1) {
+          return false
+        }
         if (scope.index > 0) {
           scope.index--;
           scope.play(scope.index);
@@ -102,7 +115,9 @@ plangular.directive('plangular', ['$timeout', 'plangularConfig', function($timeo
       };
 
       scope.next = function() {
-        if (scope.tracks.length < 1) { return false }
+        if (scope.tracks.length < 1) {
+          return false
+        }
         if (scope.index < scope.tracks.length - 1) {
           scope.index++;
           scope.play(scope.index);
@@ -129,6 +144,8 @@ plangular.directive('plangular', ['$timeout', 'plangularConfig', function($timeo
       player.audio.addEventListener('ended', function() {
         if (scope.track.src === player.audio.src) {
           scope.next();
+        } else {
+          $rootScope.$broadcast('changeState', 'end');
         }
       });
 
@@ -153,4 +170,3 @@ plangular.provider('plangularConfig', function() {
 
 
 module.exports = 'plangular';
-
